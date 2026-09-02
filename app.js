@@ -12,6 +12,33 @@ if (storedVersion !== CONTENT_VERSION) {
 const $ = s => document.querySelector(s);
 const nav = $("#nav"), sectionsEl = $("#sections"), search = $("#search");
 
+const metaTargets = [
+  ["brandTitle", ".brand h1"],
+  ["brandText", ".brand p"],
+  ["chapter", ".chapter"],
+  ["heroKicker", ".hero .kicker"],
+  ["heroTitle", ".hero h2"],
+  ["heroText", ".hero > p"]
+];
+
+const defaultMeta = {};
+metaTargets.forEach(([key, selector]) => {
+  const el = $(selector);
+  if (el) {
+    defaultMeta[key] = el.innerHTML;
+    el.dataset.metaEdit = key;
+  }
+});
+
+let meta = JSON.parse(localStorage.getItem("fluidMeta") || "null") || JSON.parse(JSON.stringify(defaultMeta));
+
+function applyMeta(){
+  metaTargets.forEach(([key, selector]) => {
+    const el = $(selector);
+    if (el && meta[key] != null) el.innerHTML = meta[key];
+  });
+}
+
 function render(){
   nav.innerHTML = "";
   sectionsEl.innerHTML = "";
@@ -24,7 +51,10 @@ function render(){
     const el=document.createElement("section");
     el.className="section"; el.id=s.id;
     el.innerHTML=`<div class="section-head">
-      <div><h3>${s.title}</h3><p class="subtitle">${s.sub}</p></div>
+      <div class="section-heading-text">
+        <h3 class="section-title-edit" data-field="title">${s.title}</h3>
+        <p class="subtitle section-sub-edit" data-field="sub">${s.sub}</p>
+      </div>
       <label class="complete"><input type="checkbox" ${completed[s.id]?"checked":""} data-complete="${s.id}"> 학습 완료</label>
     </div>
     <div class="body">${s.body}</div>`;
@@ -38,23 +68,50 @@ function render(){
   updateProgress();
 }
 
+function editableElements(){
+  return document.querySelectorAll(".editable, .section-title-edit, .section-sub-edit, [data-meta-edit]");
+}
+
 function setEditable(on){
   editMode=on;
-  document.querySelectorAll(".editable").forEach(el=>el.contentEditable=on?"true":"false");
+  document.body.classList.toggle("edit-mode", on);
+  editableElements().forEach(el=>{
+    el.contentEditable=on?"true":"false";
+    if(on) el.setAttribute("spellcheck","false");
+    else el.removeAttribute("spellcheck");
+  });
   $("#editBtn").textContent=on?"편집 저장":"편집 모드";
   $("#editBtn").classList.toggle("success",on);
-  $("#saveStatus").textContent=on?"본문을 직접 수정한 뒤 ‘편집 저장’을 누르세요":`실무 사례 v${CONTENT_VERSION}`;
+  $("#saveStatus").textContent=on?"제목·본문·소개문구를 직접 수정할 수 있습니다 · Ctrl+S 저장":`실무 사례 v${CONTENT_VERSION}`;
+}
+
+function saveMeta(){
+  metaTargets.forEach(([key, selector])=>{
+    const el=$(selector);
+    if(el) meta[key]=el.innerHTML;
+  });
+  localStorage.setItem("fluidMeta",JSON.stringify(meta));
 }
 
 function saveEdits(){
   sections.forEach(s=>{
     const sec=document.getElementById(s.id);
-    if(sec) s.body=sec.querySelector(".body").innerHTML;
+    if(!sec) return;
+    const titleEl=sec.querySelector('[data-field="title"]');
+    const subEl=sec.querySelector('[data-field="sub"]');
+    const bodyEl=sec.querySelector(".body");
+    if(titleEl) s.title=titleEl.innerText.trim() || s.title;
+    if(subEl) s.sub=subEl.innerText.trim();
+    if(bodyEl) s.body=bodyEl.innerHTML;
   });
+  saveMeta();
   localStorage.setItem("fluidSections",JSON.stringify(sections));
   localStorage.setItem("fluidContentVersion",String(CONTENT_VERSION));
-  $("#saveStatus").textContent="브라우저에 저장됨";
-  toast("수정 내용을 이 브라우저에 저장했습니다.");
+  document.querySelectorAll(".nav button").forEach((btn,idx)=>{
+    if(sections[idx]) btn.textContent=sections[idx].title;
+  });
+  $("#saveStatus").textContent="이 브라우저에 저장됨";
+  toast("제목과 본문을 포함한 수정 내용을 저장했습니다.");
 }
 
 $("#editBtn").onclick=()=>{
@@ -84,6 +141,11 @@ document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){
     e.preventDefault();search.focus();search.select();
   }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"&&editMode){
+    e.preventDefault();
+    saveEdits();
+    setEditable(false);
+  }
 });
 
 const observer = new IntersectionObserver(entries=>{
@@ -101,7 +163,7 @@ function toast(msg){
 
 $("#exportBtn").onclick=()=>{
   if(editMode) saveEdits();
-  const data={version:CONTENT_VERSION,sections,completed,exportedAt:new Date().toISOString()};
+  const data={version:CONTENT_VERSION,sections,completed,meta,exportedAt:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="유체역학_학습노트_백업.json";a.click();
   URL.revokeObjectURL(a.href);
@@ -115,22 +177,28 @@ $("#fileInput").onchange=e=>{
     try{
       const d=JSON.parse(r.result);
       if(!Array.isArray(d.sections)) throw new Error();
-      sections=d.sections; completed=d.completed||{};
+      sections=d.sections; completed=d.completed||{}; meta=d.meta||meta;
       localStorage.setItem("fluidSections",JSON.stringify(sections));
       localStorage.setItem("fluidCompleted",JSON.stringify(completed));
+      localStorage.setItem("fluidMeta",JSON.stringify(meta));
       localStorage.setItem("fluidContentVersion",String(CONTENT_VERSION));
-      render(); observe(); toast("백업을 불러왔습니다.");
+      applyMeta(); render(); observe(); toast("백업을 불러왔습니다.");
     }catch{alert("올바른 백업 JSON 파일이 아닙니다.");}
   }; r.readAsText(f);
 };
 
 $("#resetBtn").onclick=()=>{
   if(confirm("수정 내용과 학습 완료 기록을 기본 상태로 되돌릴까요?")){
-    localStorage.removeItem("fluidSections"); localStorage.removeItem("fluidCompleted");
-    sections=JSON.parse(JSON.stringify(DEFAULT_SECTIONS)); completed={};
+    localStorage.removeItem("fluidSections");
+    localStorage.removeItem("fluidCompleted");
+    localStorage.removeItem("fluidMeta");
+    sections=JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+    completed={};
+    meta=JSON.parse(JSON.stringify(defaultMeta));
     localStorage.setItem("fluidSections",JSON.stringify(sections));
+    localStorage.setItem("fluidMeta",JSON.stringify(meta));
     localStorage.setItem("fluidContentVersion",String(CONTENT_VERSION));
-    render(); observe(); toast("최신 기본 내용으로 초기화했습니다.");
+    applyMeta(); render(); observe(); toast("최신 기본 내용으로 초기화했습니다.");
   }
 };
 
@@ -174,4 +242,6 @@ $("#nextQuiz").onclick=()=>{
 };
 $("#quizPanel").addEventListener("click",e=>{if(e.target.id==="quizPanel")$("#quizPanel").style.display="none";});
 
-render(); observe();
+applyMeta();
+render();
+observe();
