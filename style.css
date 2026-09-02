@@ -40,6 +40,7 @@ button{cursor:pointer}
 .progress{height:8px;background:#080c16;border-radius:99px;overflow:hidden}.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .section{scroll-margin-top:82px;border:1px solid var(--line);background:rgba(17,24,43,.8);border-radius:20px;padding:28px;margin:18px 0}
 .section-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}.section h3{font-size:26px;margin:0 0 7px}
+.section-heading-text{min-width:0;flex:1}
 .subtitle{font-size:14px;color:var(--muted);margin:0}
 .complete{display:flex;gap:7px;align-items:center;color:var(--muted);font-size:13px;white-space:nowrap}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
@@ -49,7 +50,11 @@ button{cursor:pointer}
 .formula{font-family:"Cambria Math","Times New Roman",serif;font-size:20px;overflow:auto;white-space:nowrap;
  padding:18px 20px;background:#080d19;border:1px solid #24314f;border-radius:14px;margin:15px 0;color:#f7fbff}
 .callout{padding:16px 18px;border-left:3px solid var(--accent);background:rgba(103,183,255,.07);border-radius:10px;line-height:1.75}
-.editable[contenteditable="true"]{outline:2px dashed rgba(103,183,255,.45);outline-offset:7px;border-radius:8px}
+[contenteditable="true"]{outline:2px dashed rgba(103,183,255,.5);outline-offset:6px;border-radius:7px;cursor:text;transition:outline-color .15s,background .15s}
+[contenteditable="true"]:focus{outline-color:var(--accent);background:rgba(103,183,255,.06)}
+.edit-mode .section{border-color:rgba(103,183,255,.38)}
+.edit-mode .hero{border-color:rgba(103,183,255,.38)}
+.edit-mode .section-title-edit,.edit-mode .section-sub-edit{min-height:1em}
 mark{background:var(--warn);color:#241b00;border-radius:3px;padding:0 .12em}
 .quiz-panel{display:none;position:fixed;inset:0;z-index:20;background:rgba(3,7,14,.72);backdrop-filter:blur(8px);padding:24px;overflow:auto}
 .quiz-box{max-width:780px;margin:4vh auto;background:#0f172a;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
