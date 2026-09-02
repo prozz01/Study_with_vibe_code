@@ -16,9 +16,9 @@
     <input id="search" class="search" placeholder="개념 검색 (Ctrl / ⌘ + K)">
     <nav id="nav" class="nav"></nav>
     <div class="sidebar-footer">
-      <button class="small-btn" id="exportBtn">수정 내용 백업(JSON)</button>
-      <button class="small-btn" id="importBtn">백업 불러오기</button>
-      <button class="small-btn" id="resetBtn">기본 내용으로 초기화</button>
+      <button class="small-btn" id="exportBtn">내용 백업(JSON)</button>
+      <button class="small-btn admin-only hidden" id="importBtn">백업 불러오기</button>
+      <button class="small-btn admin-only hidden" id="resetBtn">기본 내용으로 초기화</button>
       <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
     </div>
   </aside>
@@ -27,10 +27,12 @@
     <header class="topbar">
       <div class="topbar-left">
         <span class="chapter">유체역학</span>
-        <span class="status" id="saveStatus">자동 저장 준비</span>
+        <span class="status" id="saveStatus">온라인 내용 불러오는 중</span>
       </div>
       <div class="actions">
-        <button class="action" id="editBtn">편집 모드</button>
+        <span class="status auth-state" id="authState">방문자 모드</span>
+        <button class="action" id="authBtn">관리자 로그인</button>
+        <button class="action admin-only hidden" id="editBtn">편집 모드</button>
         <button class="action primary" id="quizBtn">퀴즈 풀기</button>
       </div>
     </header>
@@ -69,6 +71,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
